@@ -432,8 +432,7 @@ function jal_editRegistration($id, $product, $version, $name, $address, $state, 
 	return false;
 }
 
-
-//*************** DATABASE FUNCTIONS ***********************
+//*************** END DATABASE FUNCTIONS ***********************
 
 
 //*************** AJAX API Calls ***********************
@@ -531,8 +530,6 @@ function kyjax_update_registration() {
 //AJAX API Calls Registration ***********************
 add_action( 'wp_ajax_nopriv_regupdate', 'kyjax_update_registration' );
 add_action( 'wp_ajax_regupdate', 'kyjax_update_registration' );
-//*************** AJAX API Calls ***********************
-
 
 function kyjax_usage() {
 		$kyoptions = get_option( 'kytracker_option_name' );
@@ -721,3 +718,7 @@ function kyjax_reg_edit() {
 	exit;
 }
 add_action( 'wp_ajax_reg_edit', 'kyjax_reg_edit' );
+
+//*************** END AJAX API Calls ***********************
+
+
