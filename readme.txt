@@ -12,65 +12,59 @@ Tracks the distribution of your installable product. Usage statistics, Registrat
 == Description ==
 Tracks the distribution of your installable products. The plugin provides an ajax API to accept installation registrations & usage data. Also provides a mechanism for pushing product upgrades to clients.  Custom build tags can also be used to track clients with customized products and push custom upgrades to these clients.
 
-.Net client library is available at www.kyght.com . Other client libraries will be available later.
+Plugin REST API
+    http://www.yoursite.com/wp-admin/admin-ajax.php
 
-Usage:
+
+    Actions:
+       	regupdate  - Adds\Updates a registration record
+	useapp     - Updates product\version usage and registered client use
+	upgrade    - Checks for a product upgrade with a higher version number
+
+
+    Example (.Net API call to register a client)
+
+            var response = HttpHelper.Post(URL, new NameValueCollection() {
+                { "action", "regupdate" },                
+                { "sky", SecretKey },  //Secret ID must match ID in your Wordpress|Settings|InstallTracker              
+                { "product", Product },
+                { "ver", Version },
+                { "custom", Custom },
+
+                { "trackid", RegID }, //TrackID from previous registration to allow updates, blank for new
+                { "key", key },
+                { "name", name },
+                { "email", email },
+                { "phone", phone },
+                { "contact", contact },
+                { "addr", address },
+                { "city", city },
+                { "state", state },
+                { "zipcode", zipcode}
+            });    
+        
+            var str = System.Text.Encoding.Default.GetString(response);
+            if (str != null && str.Equals("0")) return false; //Secret key might not match
+            var outObject = JsonConvert.DeserializeObject<Registration>(str);
+            if (outObject.valid == "TRUE")
+            {
+                RegID = outObject.regID; //Returned Registration ID for future updates
+                return true;
+            }    
+
+
+.Net API wrapper client library is available at www.kyght.com (http://www.kyght.com/?page_id=147). 
+Other client libraries will be available later on GitHub (https://github.com/kyght/InstallTracker).
+
+.Net client dll Usage
 ------------------------
-installTrack = new Tracker(\"http://www.payrollInvoicing.com/wp-admin/admin-ajax.php\", \"PayrollInvoicing.com\", \"2.1.16.80\", \"666745\");
-installTrack.RegID = PreviousRegID; //For updating registration
+installTrack = new Tracker(\"http://www.yoursite.com/wp-admin/admin-ajax.php\", \"YourProduct\", \"2.1.16.80\", \"666745\");
 
+  * installTrack.Register(String key, String name, String email, String contact, String phone, String address, String city, String state, String zipcode)
+  * installTrack.Usage(String key, OnTrackerComplete onComplete )
+  * installTrack.UpgradeAvailable(OnUpgradeAvailable onUpgrade)
+  * installTrack.Download(String fileurl, String filename, System.ComponentModel.AsyncCompletedEventHandler onComplete, DownloadProgressChangedEventHandler onProgress)
 
-//Usage stats update product usage and registered client usage,
-// if client is not registered yet, product stats will still be tracked
-installTrack.Usage(PreviousRegID,
-                    delegate(TrackArgs args)
-                    {
-                        //If false then we may have not registered yet
-                        IsRegistered = args.response.IsValid;
-                    });
-
-//You can check for available upgrades and prompt use to download
- installTrack.UpgradeAvailable(
-      delegate(TrackUpgradeArgs args) {
-          var upg = args.upgrade;
-          if (MessageBox.Show(\"Upgrade available, would you like to download & install?\",
-              \"Upgrade\", MessageBoxButton.YesNo, MessageBoxImage.Question) ==
-               MessageBoxResult.Yes)
-                {
-                     UpgradeFileName = System.IO.Path.GetTempPath() + \"\\\\\" +
-                                   System.IO.Path.GetFileName(upg.url);
-                     installTrack.Download(upg.url, UpgradeFileName,
-                              TrackerUpgrade_DownloadFileCompleted,
-                              TrackerUpgrade_DownloadProgress);
-                 }
-         }
-);
-
-
-private String UpgradeFileName = null;
-void TrackerUpgrade_DownloadFileCompleted(object sender,
-                     System.ComponentModel.AsyncCompletedEventArgs e)
-{
-      if (MessageBox.Show(\"Upgrade downloaded, your application will be restarted
-                          to install the update?\", \"Upgrade\", MessageBoxButton.OK,
-                          MessageBoxImage.Information) == MessageBoxResult.OK)
-      {
-           if (UpgradeFileName != null)
-           {
-                 //We need to Launch the Upgrade
-                 Process process = new Process();
-                 // Configure the process using the StartInfo properties.
-                 process.StartInfo.FileName = UpgradeFileName;
-                 //We need to run our of process because we are going to
-                 //shutdown to allow the update of files
-                 process.StartInfo.UseShellExecute = true;
-                 process.Start();
-                 //Sleep until process has had a chance to start
-                 System.Threading.Thread.Sleep(2000);
-                 Environment.Exit(2);
-          }
-     }
-}
 
 == Installation ==
 1. Upload `kyght-installtrack` folder to the `/wp-content/plugins/` directory
