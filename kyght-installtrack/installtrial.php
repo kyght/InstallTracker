@@ -13,21 +13,21 @@ Author URI: www.kyght.com
 */
 
 global $wpdb;
-global $jal_db_version;
-$jal_db_version = '1.7';
+global $KYGINTR_jal_db_version;
+$KYGINTR_jal_db_version = '1.7';
 
 //*************** PLUGIN DEFINES ***********************
 
 //** Setup DB Table Names **
 //Registration Table for clients
-define('COMPANY_TABLE', $wpdb->prefix . "kyght_companytry");
+define('KYG_INSTK_COMPANY_TABLE', $wpdb->prefix . "kyght_companytry");
 
 //List of products distributed and their usage
-define('PRODUCT_TABLE', $wpdb->prefix . "kyght_producttry");
+define('KYG_INSTK_PRODUCT_TABLE', $wpdb->prefix . "kyght_producttry");
 
 //User controlled table where versions can be published
 //   Custom fields can be used for clients that have a custom version
-define('UPGRADE_TABLE', $wpdb->prefix . "kyght_upgrade");
+define('KYG_INSTK_UPGRADE_TABLE', $wpdb->prefix . "kyght_upgrade");
 
 
 //***** Plugin Files *******
@@ -42,7 +42,7 @@ It provides every reply with a valid flag and message.
 Descendant classes can override getArray method to add additional properties
 to encoded data. Currently supports json encoding.
 */
-class ResultObject {
+class KYGResultObject {
 	public $message = "";
 	public $valid = "FALSE";
 
@@ -72,7 +72,7 @@ class ResultObject {
 //Registration class which is returned when client registers.
 //We only need to provide a property to set Regid and encode in getArray
 //our base class ResultObject handles the rest.
-class Registration extends ResultObject {
+class KYGRegistration extends KYGResultObject {
 	public $regid = "";
 	protected function getArray() {
 	  return array('regID' => $this->regid );
@@ -80,7 +80,7 @@ class Registration extends ResultObject {
 }
 
 //Upgrade class returned when an upgrade is available
-class Upgrade extends ResultObject {
+class KYGUpgrade extends KYGResultObject {
 	public $upid = 0;
 	public $product = "";
 	public $version = "";
@@ -104,13 +104,13 @@ class Upgrade extends ResultObject {
 
 
 //************** DATABASE and PLUGIN Setup *********************
-function createtables() {
+function KYGINTR_createtables() {
 	global $wpdb;
 
 	$charset_collate = $wpdb->get_charset_collate();
 
 	//CREATE COMPANY TABLE
-	$sql = "CREATE TABLE " . COMPANY_TABLE . " (
+	$sql = "CREATE TABLE " . KYG_INSTK_COMPANY_TABLE . " (
 		id int(10) NOT NULL AUTO_INCREMENT,
 		time datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
 		keyguid varchar(100) NOT NULL,
@@ -135,7 +135,7 @@ function createtables() {
 	dbDelta( $sql );
 
 	//CREATE PRODUCT TABLE
-	$sql = "CREATE TABLE " . PRODUCT_TABLE . " (
+	$sql = "CREATE TABLE " . KYG_INSTK_PRODUCT_TABLE . " (
 		id int(10) NOT NULL AUTO_INCREMENT,
 		product varchar(50) NOT NULL,
 		version varchar(15) NOT NULL,
@@ -149,7 +149,7 @@ function createtables() {
 	dbDelta( $sql );
 
 	//CREATE UPGRADE TABLE
-	$sql = "CREATE TABLE " . UPGRADE_TABLE . " (
+	$sql = "CREATE TABLE " . KYG_INSTK_UPGRADE_TABLE . " (
 		id int(10) NOT NULL AUTO_INCREMENT,
 		product varchar(50) NOT NULL,
 		version varchar(15) NOT NULL,
@@ -167,24 +167,24 @@ function createtables() {
 }
 
 //Call only on Activate of Plugin
-function jal_install() {
+function KYGINTR_jal_install() {
 	global $wpdb;
-	global $jal_db_version;
+	global $KYGINTR_jal_db_version;
 
 	$installed_ver = get_option( "jal_db_version" );
 
-	if ( $installed_ver != $jal_db_version ) {
-		createtables();
-		add_option( 'jal_db_version', $jal_db_version );
+	if ( $installed_ver != $KYGINTR_jal_db_version ) {
+		KYGINTR_createtables();
+		add_option( 'jal_db_version', $KYGINTR_jal_db_version );
 	}
 	
 }
-register_activation_hook( __FILE__, 'jal_install' );
+register_activation_hook( __FILE__, 'KYGINTR_jal_install' );
 
 
-function jal_upgrade() {
+function KYGINTR_jal_upgrade() {
 	global $wpdb;
-	global $jal_db_version;
+	global $KYGINTR_jal_db_version;
 
 	$charset_collate = $wpdb->get_charset_collate();
 	
@@ -196,25 +196,25 @@ function jal_upgrade() {
 	}
 }
 
-function jal_update_db_check() {
+function KYGINTR_jal_update_db_check() {
     global $jal_db_version;
     if ( get_site_option( 'jal_update_db_check' ) != $jal_db_version ) {
         jal_upgrade();
     }
 }
-add_action( 'plugins_loaded', 'jal_update_db_check' );
+add_action( 'plugins_loaded', 'KYGINTR_jal_update_db_check' );
 
 //************** END - DATABASE and PLUGIN Setup *********************
 
 
 //************** DATABASE FUNCTIONS *********************
-function jal_register( $keyguid, $company, $email, $contact, $phone, $address, $city, $state, $product, $version, $custom, $zipcode ) {
+function KYGINTR_jal_register( $keyguid, $company, $email, $contact, $phone, $address, $city, $state, $product, $version, $custom, $zipcode ) {
 	global $wpdb;
 
 	$table_name = $wpdb->prefix . 'kyght_companytry';
 
 	$wpdb->insert(
-		COMPANY_TABLE,
+		KYG_INSTK_COMPANY_TABLE,
 		array(
 			'keyguid' => $keyguid,
 			'name' => $company,
@@ -236,11 +236,11 @@ function jal_register( $keyguid, $company, $email, $contact, $phone, $address, $
 	return $lastid;
 }
 
-function jal_register_update( $trackid, $keyguid, $company, $email, $contact, $phone, $address, $city, $state, $product, $version, $custom, $zipcode ) {
+function KYGINTR_jal_register_update( $trackid, $keyguid, $company, $email, $contact, $phone, $address, $city, $state, $product, $version, $custom, $zipcode ) {
 	global $wpdb;
 
 	$uprows = $wpdb->update(
-		COMPANY_TABLE,
+		KYG_INSTK_COMPANY_TABLE,
 		array(
 			'name' => $company,
 			'address' => $address,
@@ -265,16 +265,16 @@ function jal_register_update( $trackid, $keyguid, $company, $email, $contact, $p
 }
 
 
-function jal_isregistered( $keyguid ) {
+function KYGINTR_jal_isregistered( $keyguid ) {
 	global $wpdb;
 
-	$user_count = $wpdb->get_var(  $wpdb->prepare( "SELECT COUNT(*) FROM " . COMPANY_TABLE . " WHERE keyguid = %s", $keyguid) );
+	$user_count = $wpdb->get_var(  $wpdb->prepare( "SELECT COUNT(*) FROM " . KYG_INSTK_COMPANY_TABLE . " WHERE keyguid = %s", $keyguid) );
 	if ($user_count > 0) return true;
 	return false;
 
 }
 
-function jal_productupdate( $product, $ver, $custom ) {
+function KYGINTR_jal_productupdate( $product, $ver, $custom ) {
 	global $wpdb;
 
   //strip per
@@ -283,21 +283,21 @@ function jal_productupdate( $product, $ver, $custom ) {
 
 	//Order by ID and limit 1 to get the lastest entry
 	if ($custom == NULL) {
-		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . UPGRADE_TABLE . " WHERE product = %s and (custom is null or custom = '') and vernum > %d order by id desc limit 1", $product, $vernum) );
+		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . KYG_INSTK_UPGRADE_TABLE . " WHERE product = %s and (custom is null or custom = '') and vernum > %d order by id desc limit 1", $product, $vernum) );
 	} else {
-		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . UPGRADE_TABLE . " WHERE product = %s and custom = %s and vernum > %d order by id limit 1", $product, $custom, $vernum) );
+		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . KYG_INSTK_UPGRADE_TABLE . " WHERE product = %s and custom = %s and vernum > %d order by id limit 1", $product, $custom, $vernum) );
 	}
 	
 }
 
-function jal_usage( $keyguid, $product, $version, $custom ) {
+function KYGINTR_jal_usage( $keyguid, $product, $version, $custom ) {
 	global $wpdb;
 
-	$procnt = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM " . PRODUCT_TABLE . " WHERE product = %s and version = %s", $product, $version) );
+	$procnt = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM " . KYG_INSTK_PRODUCT_TABLE . " WHERE product = %s and version = %s", $product, $version) );
 	if ($procnt <= 0) {
 	  //INSERT Product record
 		$wpdb->insert(
-			PRODUCT_TABLE,
+			KYG_INSTK_PRODUCT_TABLE,
 			array(
 				'usecount' => 1,	// Integer
 				'product' => $product,	
@@ -307,12 +307,12 @@ function jal_usage( $keyguid, $product, $version, $custom ) {
 		);
 	} else {
 	  //UPDATE Product count
-		$usage = $wpdb->get_var( $wpdb->prepare( "SELECT usecount FROM " . PRODUCT_TABLE . " WHERE product = %s and version = %s", $product, $version) );
+		$usage = $wpdb->get_var( $wpdb->prepare( "SELECT usecount FROM " . KYG_INSTK_PRODUCT_TABLE . " WHERE product = %s and version = %s", $product, $version) );
 		if ($usage == NULL) $usage = 0;
 		$usage = $usage + 1;
 
 		$wpdb->update(
-			PRODUCT_TABLE,
+			KYG_INSTK_PRODUCT_TABLE,
 			array(
 				'usecount' => $usage,	// Integer
 				'lastupdate' => current_time('mysql', 1),
@@ -327,14 +327,14 @@ function jal_usage( $keyguid, $product, $version, $custom ) {
 	//POSSIBLE Company usage update
 	//If we were give the system id of the installation, then also update usage for the company
 	if ($keyguid != null) {
-		$usage = $wpdb->get_var( $wpdb->prepare( "SELECT usecount FROM " . COMPANY_TABLE . " WHERE keyguid = %s and product = %s", $keyguid, $product) );
+		$usage = $wpdb->get_var( $wpdb->prepare( "SELECT usecount FROM " . KYG_INSTK_COMPANY_TABLE . " WHERE keyguid = %s and product = %s", $keyguid, $product) );
 		if ($usage == NULL) $usage = 0;
 		//Increae Usage by 1
 		$usage = $usage + 1;
 
 		//If this company (if keyguid is not registered then the update will just not find anything\
 		$wpdb->update(
-			COMPANY_TABLE,
+			KYG_INSTK_COMPANY_TABLE,
 			array(
 				'custom' => $custom,	// Update custom so we know if the client was update with a custom build
 				'version' => $version,	// Update version so we know what version the client is on
@@ -349,14 +349,14 @@ function jal_usage( $keyguid, $product, $version, $custom ) {
 	}
 }
 
-function jal_addUpgrade( $product, $version, $vernum, $custom, $url, $notesurl ) {
+function KYGINTR_jal_addUpgrade( $product, $version, $vernum, $custom, $url, $notesurl ) {
 	global $wpdb;
 
-	$procnt = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM " . UPGRADE_TABLE . " WHERE product = %s and version = %s", $product, $version) );
+	$procnt = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM " . KYG_INSTK_UPGRADE_TABLE . " WHERE product = %s and version = %s", $product, $version) );
 	if ($procnt <= 0) {
 
 		$addrows = $wpdb->insert(
-			UPGRADE_TABLE,
+			KYG_INSTK_UPGRADE_TABLE,
 			array(
 				'product' => $product,
 				'version' => $version,
@@ -373,14 +373,14 @@ function jal_addUpgrade( $product, $version, $vernum, $custom, $url, $notesurl )
 	return 0;
 }
 
-function jal_editUpgrade($id, $product, $version, $vernum, $custom, $url, $notesurl ) {
+function KYGINTR_jal_editUpgrade($id, $product, $version, $vernum, $custom, $url, $notesurl ) {
 	global $wpdb;
 
-	$procnt = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM " . UPGRADE_TABLE . " WHERE id = %d", $id) );
+	$procnt = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM " . KYG_INSTK_UPGRADE_TABLE . " WHERE id = %d", $id) );
 	if ($procnt >= 1) {
 
 		$wpdb->update(
-			UPGRADE_TABLE,
+			KYG_INSTK_UPGRADE_TABLE,
 			array(
 				'product' => $product,
 				'version' => $version,
@@ -400,14 +400,14 @@ function jal_editUpgrade($id, $product, $version, $vernum, $custom, $url, $notes
 	return false;
 }
 
-function jal_editRegistration($id, $product, $version, $name, $address, $state, $city, $phone, $email, $contact, $custom, $zipcode) {
+function KYGINTR_jal_editRegistration($id, $product, $version, $name, $address, $state, $city, $phone, $email, $contact, $custom, $zipcode) {
 	global $wpdb;
 
-	$procnt = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM " . COMPANY_TABLE . " WHERE id = %d", $id) );
+	$procnt = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM " . KYG_INSTK_COMPANY_TABLE . " WHERE id = %d", $id) );
 	if ($procnt >= 1) {
 
 		$wpdb->update(
-			COMPANY_TABLE,
+			KYG_INSTK_COMPANY_TABLE,
 			array(
 				'product' => $product,
 				'version' => $version,
@@ -470,7 +470,7 @@ function kyjax_update_registration() {
     $contact = $_POST['contact'];
     $phone = $_POST['phone'];
 
-		$kyreg = new Registration();
+		$kyreg = new KYGRegistration();
 		
 		//Validate Supplied Data
 		$valid = "";
@@ -482,12 +482,12 @@ function kyjax_update_registration() {
 		//Return valadation failure reason
 		if ($valid != "") {
 			$kyreg->message = $valid;
-		  echo $kyreply->to_json();
+		  echo $kyreg->to_json();
 		  exit;
 		}
 
 		//Process Registration Records
-		if (jal_isregistered($key)) {
+		if (KYGINTR_jal_isregistered($key)) {
 		  //Mmmm, the key being updated may be an update or a hack on records
 		  //We will have to apply some logic to the update or have an archive table
 		  //Ok, if the user wants to update the registration records, they must supply
@@ -496,11 +496,11 @@ function kyjax_update_registration() {
 
     	if ($sysid == null) {
 				$kyreg->message = 'Registration Track ID must be supplied';
-		  	echo $kyreply->to_json();
+		  	echo $kyreg->to_json();
 		  	exit;
     	}
 		  //updateRegister
-		  $uprows = jal_register_update($sysid, $key, $name, $email, $contact, $phone, $addr, $city, $state, $product, $ver, $custom, $zipcode);
+		  $uprows = KYGINTR_jal_register_update($sysid, $key, $name, $email, $contact, $phone, $addr, $city, $state, $product, $ver, $custom, $zipcode);
 		  if ($uprows > 0) {
 				$kyreg->message = 'Registration Update';
 				$kyreg->valid = 'TRUE';
@@ -510,17 +510,17 @@ function kyjax_update_registration() {
 				$kyreg->message = 'Unable to find Registration';
 				$kyreg->valid = 'FALSE';
 				$kyreg->regID = $sysid;
-		  	echo $kyreply->to_json();
+		  	echo $kyreg->to_json();
 			}
 		  exit;
 		  
 		} else {
-    	$lastid = jal_register($key, $name, $email, $contact, $phone, $addr, $city, $state, $product, $ver, $custom, $zipcode);
+    	$lastid = KYGINTR_jal_register($key, $name, $email, $contact, $phone, $addr, $city, $state, $product, $ver, $custom, $zipcode);
 
 			$kyreg->message = 'Registration Added';
 			$kyreg->valid = 'TRUE';
 			$kyreg->regID = $lastid;
-	  	echo $kyreply->to_json();
+	  	echo $kyreg->to_json();
     }
 
     // IMPORTANT: don't forget to "exit"
@@ -554,7 +554,7 @@ function kyjax_usage() {
 		$key = $_POST['key'];
 		$custom = $_POST['custom'];
 
-		$kyreply = new ResultObject();
+		$kyreply = new KYGResultObject();
 
 		//Validate Supplied Data
 		$valid = "";
@@ -568,7 +568,7 @@ function kyjax_usage() {
 		  exit;
 		}
 		
-	  jal_usage( $key, $product, $ver, $custom );
+	  KYGINTR_jal_usage( $key, $product, $ver, $custom );
 	  
 		$kyreply->message = "Usage Updated";
 		$kyreply->valid = "TRUE";
@@ -605,10 +605,10 @@ function kyjax_upgrade() {
 		$custom = $_POST['custom'];
 		$ver = $_POST['ver'];
 
-		$kyreply = new Upgrade();
+		$kyreply = new KYGUpgrade();
 
 		//Validate Supplied Data
-	  $uprow = jal_productupdate( $product, $ver, $custom );
+	  $uprow = KYGINTR_jal_productupdate( $product, $ver, $custom );
 	  
 	  if ($uprow != null) {
 			$kyreply->upid = $uprow->id;
@@ -635,7 +635,7 @@ add_action( 'wp_ajax_upgrade', 'kyjax_upgrade' );
 
 function kyjax_upgrade_add() {
 
-	$kyreply = new ResultObject();
+	$kyreply = new KYGResultObject();
 	$product = $_POST['product'];
 	$version = $_POST['version'];
 	$vernum = $_POST['vernum'];
@@ -644,7 +644,7 @@ function kyjax_upgrade_add() {
 	$notesurl = $_POST['notesurl'];
 
 
-	$rowaff = jal_addUpgrade( $product, $version, $vernum, $custom, $url, $notesurl );
+	$rowaff = KYGINTR_jal_addUpgrade( $product, $version, $vernum, $custom, $url, $notesurl );
 	if ($rowaff > 0) {
 		$kyreply->message = "Upgrade Added Sucessfully";
 		$kyreply->valid = "TRUE";
@@ -661,7 +661,7 @@ add_action( 'wp_ajax_upgrade_add', 'kyjax_upgrade_add' );
 
 function kyjax_upgrade_edit() {
 
-	$kyreply = new ResultObject();
+	$kyreply = new KYGResultObject();
 	$id = $_POST['id'];
 	$product = $_POST['product'];
 	$version = $_POST['version'];
@@ -671,7 +671,7 @@ function kyjax_upgrade_edit() {
 	$notesurl = $_POST['notesurl'];
 
 
-	$updated = jal_editUpgrade( $id, $product, $version, $vernum, $custom, $url, $notesurl );
+	$updated = KYGINTR_jal_editUpgrade( $id, $product, $version, $vernum, $custom, $url, $notesurl );
 	if ($updated) {
 		$kyreply->message = "Upgrade Edited Sucessfully";
 		$kyreply->valid = "TRUE";
@@ -689,7 +689,7 @@ add_action( 'wp_ajax_upgrade_edit', 'kyjax_upgrade_edit' );
 
 function kyjax_reg_edit() {
 
-	$kyreply = new ResultObject();
+	$kyreply = new KYGResultObject();
 	$id = $_POST['id'];
 	$name = $_POST['name'];
 	$address = $_POST['address'];
@@ -704,7 +704,7 @@ function kyjax_reg_edit() {
 	$zipcode = $_POST['zipcode'];
 
 
-	$updated = jal_editRegistration( $id, $product, $version, $name, $address, $state, $city, $phone, $email, $contact, $custom, $zipcode );
+	$updated = KYGINTR_jal_editRegistration( $id, $product, $version, $name, $address, $state, $city, $phone, $email, $contact, $custom, $zipcode );
 	if ($updated) {
 		$kyreply->message = "Registration Edited Sucessfully";
 		$kyreply->valid = "TRUE";
@@ -720,5 +720,3 @@ function kyjax_reg_edit() {
 add_action( 'wp_ajax_reg_edit', 'kyjax_reg_edit' );
 
 //*************** END AJAX API Calls ***********************
-
-

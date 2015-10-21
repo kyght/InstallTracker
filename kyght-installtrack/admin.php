@@ -12,6 +12,7 @@ function kytracker_admin_menu() {
 	//Registrations
 	add_submenu_page( 'kytracker_admin_page', 'Registrations', 'Registrations', 'administrator', 'kytracker_admin_reg', 'kytracker_admin_reg' );
 	add_submenu_page( 'kytracker_admin_reg', 'Edit', 'Edit', 'administrator', 'kytracker_admin_reg_view', 'kytracker_admin_reg_view' );
+	add_submenu_page( 'kytracker_admin_reg', 'Delete', 'Delete', 'administrator', 'kytracker_admin_reg_del', 'kytracker_admin_reg_del' );
 	//Upgrades
 	add_submenu_page( 'kytracker_admin_page', 'Upgrades', 'Upgrades', 'administrator', 'kytracker_admin_upg', 'kytracker_admin_upg' );
 	add_submenu_page( 'kytracker_admin_upg', 'Add', 'Add', 'administrator', 'kytracker_admin_upg_add', 'kytracker_admin_upg_add' );
@@ -105,8 +106,7 @@ global $wpdb;
 		</table>
 
 	
-		<?
-		
+		<?php
 		
 	echo '</div>';
 	echo '</div>';
@@ -182,7 +182,8 @@ global $wpdb;
 	    </tbody>
 	</table>
 
-	<?
+	<?php
+	
 	echo '</div>';
 	echo '</div>';
 }
@@ -274,7 +275,7 @@ echo '<div class="wrap">';
     </tbody>
 </table>
 
-<?
+<?php
 
 $total = $wpdb->get_var( "SELECT COUNT(`id`) FROM " . $table_name );
 $num_of_pages = ceil( $total / $limit );
@@ -547,5 +548,23 @@ function kytracker_admin_prods_del()
 	$wpdb->delete( $table_name, array( 'id' => $id ) );
 
   echo "<h2>Product Track Record Deleted</h2>";
+
+}
+
+function kytracker_admin_reg_del()
+{
+	global $wpdb;
+
+	$id = $_GET['id'];
+
+	if ($id == null) {
+		echo "<h2>Unable to locate that product record</h2>";
+		exit;
+	}
+
+	$table_name = $wpdb->prefix . "kyght_companytry";
+	$wpdb->delete( $table_name, array( 'id' => $id ) );
+
+  echo "<h2>Registration Record Deleted</h2>";
 
 }
