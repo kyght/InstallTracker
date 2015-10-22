@@ -17,6 +17,8 @@ Tracks the distribution of your installable products. The plugin provides an aja
 
 == Folders ==
 -------------------------------------
-	kyght-installtrack           -  Wordpress plugin folder - can be copies directly into your "/wp-content/plugins/" directory
+kyght-installtrack           
+    -  Wordpress plugin folder - can be copies directly into your "/wp-content/plugins/" directory
 
-	kyght-installtrack-clients   - Contains plugin REST API wrapper by language
+kyght-installtrack-clients   
+    - Contains plugin REST API wrapper by language
