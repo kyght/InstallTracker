@@ -285,7 +285,7 @@ $page_links = paginate_links( array(
     'prev_text' => __( '&laquo;', 'aag' ),
     'next_text' => __( '&raquo;', 'aag' ),
     'total' => $num_of_pages,
-    'current' => $pagenum
+    'current' => $pagenum,
 ) );
 
 if ( $page_links ) {
@@ -321,19 +321,20 @@ wp_localize_script( 'kytracker', 'KyITrack', array( 'ajaxurl' => admin_url( 'adm
       <form>
 				<table class="widefat">
 			    <tbody>
-			      <tr><td>Name</td><td><input type="text" size="40" id="name" name="name" value="<?php echo $uprow->name ?>"/></td></tr>
-			      <tr><td>Address</td><td><input type="text" size="40" id="address" name="address" value="<?php echo $uprow->address ?>"/></td></tr>
-			      <tr><td>City</td><td><input type="text" size="40" id="city" name="city" value="<?php echo $uprow->city ?>"/></td></tr>
-			      <tr><td>State</td><td><input type="text" id="state" size="40" name="state" value="<?php echo $uprow->state ?>"/></td></tr>
-			      <tr><td>Zip\Postal</td><td><input type="text" id="zipcode" size="40" name="zipcode" value="<?php echo $uprow->zipcode ?>"/></td></tr>
-			      <tr><td>Contact</td><td><input type="text" id="contact" size="40" name="contact" value="<?php echo $uprow->contact ?>"/></td></tr>
-			      <tr><td>Email</td><td><input type="text" size="50" id="email" name="email" value="<?php echo $uprow->email ?>"/></td></tr>
-			      <tr><td>Phone</td><td><input type="text" size="25" id="phone" name="phone" value="<?php echo $uprow->phone ?>"/></td></tr>
-			      <tr><td>Product</td><td><input type="text" size="40" id="product" name="product" value="<?php echo $uprow->product ?>"/></td></tr>
-			      <tr><td>Version</td><td><input type="text" size="20" id="version" name="version" value="<?php echo $uprow->version ?>"/></td></tr>
-			      <tr><td>Custom</td><td><input type="text" size="20" id="custom" name="custom" value="<?php echo $uprow->custom ?>"/></td></tr>
-			      <tr><td>Usage</td><td><?php echo $uprow->usecount ?></td></tr>
-			      <tr><td>Last Used</td><td><?php echo $uprow->lastused ?></td></tr>
+			      <tr><td>Name</td><td><input type="text" size="40" id="name" name="name" value="<?php echo esc_attr($uprow->name) ?>"/></td></tr>
+			      <tr><td>Address</td><td><input type="text" size="40" id="address" name="address" value="<?php echo esc_attr($uprow->address) ?>"/></td></tr>
+			      <tr><td>City</td><td><input type="text" size="40" id="city" name="city" value="<?php echo esc_attr($uprow->city) ?>"/></td></tr>
+			      <tr><td>State</td><td><input type="text" id="state" size="40" name="state" value="<?php echo esc_attr($uprow->state) ?>"/></td></tr>
+			      <tr><td>Zip\Postal</td><td><input type="text" id="zipcode" size="40" name="zipcode" value="<?php echo esc_attr($uprow->zipcode) ?>"/></td></tr>
+			      <tr><td>Contact</td><td><input type="text" id="contact" size="40" name="contact" value="<?php echo esc_attr($uprow->contact) ?>"/></td></tr>
+			      <tr><td>Email</td><td><input type="text" size="50" id="email" name="email" value="<?php echo esc_attr($uprow->email) ?>"/></td></tr>
+			      <tr><td>Phone</td><td><input type="text" size="25" id="phone" name="phone" value="<?php echo esc_attr($uprow->phone) ?>"/></td></tr>
+			      <tr><td>Product</td><td><input type="text" size="40" id="product" name="product" value="<?php echo esc_attr($uprow->product) ?>"/></td></tr>
+			      <tr><td>Version</td><td><input type="text" size="20" id="version" name="version" value="<?php echo esc_attr($uprow->version) ?>"/></td></tr>
+			      <tr><td>Custom</td><td><input type="text" size="20" id="custom" name="custom" value="<?php echo esc_attr($uprow->custom) ?>"/></td></tr>
+			      <tr><td>Usage</td><td><?php echo esc_html($uprow->usecount) ?></td></tr>
+			      <tr><td>Last Used</td><td><?php echo esc_html($uprow->lastused) ?></td></tr>
+			      <tr><td>Client Key</td><td><?php echo esc_html($uprow->keyguid) ?></td></tr>
 			      <tr>
 						   <td><input type="button" id="submit" name="submit" value="Submit" class="button-primary"/></td>
 						   <td style="text-align:right">
@@ -348,7 +349,7 @@ wp_localize_script( 'kytracker', 'KyITrack', array( 'ajaxurl' => admin_url( 'adm
 	    		<tbody>
          </table>
           <input type="hidden" id="id" name="id" value="<?php echo $id ?>"/>
-          <input type="hidden" id="action" name="action" value="reg_edit"/>
+          <input type="hidden" id="action" name="action" value="kyg_reg_edit"/>
       </form>
    </div>
 <?php
@@ -458,7 +459,7 @@ wp_localize_script( 'kytracker', 'KyITrack', array( 'ajaxurl' => admin_url( 'adm
 			      <tr><td>Notes (URL)</td><td><input type="text" size="80" id="notesurl" name="notesurl"/></td></tr>
 	    		<tbody>
          </table>
-          <input type="hidden" id="action" name="action" value="upgrade_add"/>
+          <input type="hidden" id="action" name="action" value="kyg_upgrade_add"/>
      			<input type="button" id="submit" name="submit" value="Submit" class="button-primary"/>
       </form>
    </div>
@@ -508,7 +509,7 @@ wp_localize_script( 'kytracker', 'KyITrack', array( 'ajaxurl' => admin_url( 'adm
 	    		<tbody>
          </table>
           <input type="hidden" id="id" name="id" value="<?php echo $id ?>"/>
-          <input type="hidden" id="action" name="action" value="upgrade_edit"/>
+          <input type="hidden" id="action" name="action" value="kyg_upgrade_edit"/>
       </form>
    </div>
 <?php

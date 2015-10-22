@@ -16,7 +16,7 @@ jQuery(document).ready(
 							data: {"action": action, "id":id, "product":prod, "version":ver, "vernum":vnum, "custom":cus, "url":ul, "notesurl":notesurl},
 							success: function(data){
 									alert(data.msg);
-									window.location.href = 'admin.php?page=kytracker_admin_upg';
+									if (data.valid == "TRUE") window.location.href = 'admin.php?page=kytracker_admin_upg';
 									}
 				});
 	});

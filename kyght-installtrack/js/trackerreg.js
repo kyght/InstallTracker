@@ -22,7 +22,7 @@ jQuery(document).ready(
 							data: {"action": action, "id":id, "name":name, "address":address, "city":city, "state":state, "contact":contact, "email":email, "phone":phone, "product":product, "version":version, "custom":custom, "zipcode":zipcode},
 							success: function(data){
 									alert(data.msg);
-									window.location.href = 'admin.php?page=kytracker_admin_reg_view&id='+id;
+									if (data.valid == "TRUE") window.location.href = 'admin.php?page=kytracker_admin_reg_view&id='+id;
 									}
 				});
 	});

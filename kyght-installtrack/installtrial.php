@@ -190,16 +190,16 @@ function KYGINTR_jal_upgrade() {
 	
 	$installed_ver = get_option( "jal_db_version" );
 
-	if ( $installed_ver != $jal_db_version ) {
+	if ( $installed_ver != $KYGINTR_jal_db_version ) {
 		createtables();
-		update_option( 'jal_db_version', $jal_db_version );
+		update_option( 'jal_db_version', $KYGINTR_jal_db_version );
 	}
 }
 
 function KYGINTR_jal_update_db_check() {
-    global $jal_db_version;
-    if ( get_site_option( 'jal_update_db_check' ) != $jal_db_version ) {
-        jal_upgrade();
+    global $KYGINTR_jal_db_version;
+    if ( get_site_option( 'jal_update_db_check' ) != $KYGINTR_jal_db_version ) {
+        KYGINTR_jal_upgrade();
     }
 }
 add_action( 'plugins_loaded', 'KYGINTR_jal_update_db_check' );
@@ -272,6 +272,13 @@ function KYGINTR_jal_isregistered( $keyguid ) {
 	if ($user_count > 0) return true;
 	return false;
 
+}
+
+function KYGINTR_jal_regID_byGuid( $keyguid ) {
+	global $wpdb;
+
+	$regid = $wpdb->get_var(  $wpdb->prepare( "SELECT id FROM " . KYG_INSTK_COMPANY_TABLE . " WHERE keyguid = %s", $keyguid) );
+	return $regid;
 }
 
 function KYGINTR_jal_productupdate( $product, $ver, $custom ) {
@@ -478,13 +485,47 @@ function kyjax_update_registration() {
 		if (strlen($key) < 32) $valid = "Key too short";
 		if (strlen($key) > 38) $valid = "Key too long";
 		if ($key == "00000000-0000-0000-0000-000000000000") $valid = "Key not initialized";
+		
+		if (strlen($name) > 60) $valid = "Name is too long";
+		if (strlen($addr) > 120) $valid = "Address is too long";
+		if (strlen($city) > 60) $valid = "City is too long";
+		if (strlen($state) > 50) $valid = "State is too long";
+		if (strlen($email) > 120) $valid = "Email is too long";
+		if (strlen($phone) > 30) $valid = "Phone is too long";
+		if (strlen($zipcode) > 15) $valid = "Postal|Zip is too long";
+		if (strlen($contact) > 60) $valid = "Contact is too long";
 
-		//Return valadation failure reason
+		if (strlen($product) > 50) $valid = "Product is too long";
+		if (strlen($ver) > 15) $valid = "Version is too long";
+		if (strlen($custom) > 60) $valid = "Custom is too long";
+
+		//Return validation failure reason
 		if ($valid != "") {
 			$kyreg->message = $valid;
+			$kyreg->valid = "FALSE";
 		  echo $kyreg->to_json();
 		  exit;
 		}
+
+		//Clean up inputs
+		$email = sanitize_email($email);
+		$name = sanitize_text_field($name);
+		$addr = sanitize_text_field($addr);
+		$state = sanitize_text_field($state);
+		$city = sanitize_text_field($city);
+		$phone = sanitize_text_field($phone);
+		$email = sanitize_text_field($email);
+		$contact = sanitize_text_field($contact);
+		$zipcode = sanitize_text_field($zipcode);
+
+		$product = sanitize_text_field($product);
+		$ver = sanitize_text_field($ver);
+		$custom = sanitize_text_field($custom);
+		
+		$name = stripslashes_deep($name);
+		$addr = stripslashes_deep($addr);
+		$contact = stripslashes_deep($contact);
+		$city = stripslashes_deep($city);
 
 		//Process Registration Records
 		if (KYGINTR_jal_isregistered($key)) {
@@ -493,8 +534,10 @@ function kyjax_update_registration() {
 		  //Ok, if the user wants to update the registration records, they must supply
 		  //the key and our database id that we retured previously
     	$sysid = $_POST['trackid'];
+    	$idbykey = KYGINTR_jal_regID_byGuid($key);
 
     	if ($sysid == null) {
+    		$kyreg->valid = 'FALSE';
 				$kyreg->message = 'Registration Track ID must be supplied';
 		  	echo $kyreg->to_json();
 		  	exit;
@@ -504,12 +547,12 @@ function kyjax_update_registration() {
 		  if ($uprows > 0) {
 				$kyreg->message = 'Registration Update';
 				$kyreg->valid = 'TRUE';
-				$kyreg->regID = $sysid;
-		  	echo $kyreply->to_json();
+				$kyreg->regid = $idbykey;
+		  	echo $kyreg->to_json();
 			} else {
 				$kyreg->message = 'Unable to find Registration';
 				$kyreg->valid = 'FALSE';
-				$kyreg->regID = $sysid;
+				$kyreg->regid = $sysid;
 		  	echo $kyreg->to_json();
 			}
 		  exit;
@@ -519,7 +562,7 @@ function kyjax_update_registration() {
 
 			$kyreg->message = 'Registration Added';
 			$kyreg->valid = 'TRUE';
-			$kyreg->regID = $lastid;
+			$kyreg->regid = $lastid;
 	  	echo $kyreg->to_json();
     }
 
@@ -528,8 +571,8 @@ function kyjax_update_registration() {
 }
 
 //AJAX API Calls Registration ***********************
-add_action( 'wp_ajax_nopriv_regupdate', 'kyjax_update_registration' );
-add_action( 'wp_ajax_regupdate', 'kyjax_update_registration' );
+add_action( 'wp_ajax_nopriv_kyg_regupdate', 'kyjax_update_registration' );
+add_action( 'wp_ajax_kyg_regupdate', 'kyjax_update_registration' );
 
 function kyjax_usage() {
 		$kyoptions = get_option( 'kytracker_option_name' );
@@ -562,6 +605,19 @@ function kyjax_usage() {
 		if (strlen($key) < 32) $valid = "Key too short";
 		if (strlen($key) > 38) $valid = "Key too long";
 		if ($key == "00000000-0000-0000-0000-000000000000") $valid = "Key not initialized";
+		
+		if (strlen($product) > 50) $valid = "Product is too long";
+		if (strlen($ver) > 15) $valid = "Version is too long";
+		if (strlen($custom) > 60) $valid = "Custom is too long";
+
+		//Return validation failure reason
+		if ($valid != "") {
+			$kyreg->message = $valid;
+			$kyreply->valid = "FALSE";
+		  echo $kyreg->to_json();
+		  exit;
+		}
+		
 		if ($valid != "") {
 			$kyreply->message = valid;
 		  echo $kyreply.to_json();
@@ -578,8 +634,8 @@ function kyjax_usage() {
 
 }
 
-add_action( 'wp_ajax_nopriv_useapp', 'kyjax_usage' );
-add_action( 'wp_ajax_useapp', 'kyjax_usage' );
+add_action( 'wp_ajax_nopriv_kyg_useapp', 'kyjax_usage' );
+add_action( 'wp_ajax_kyg_useapp', 'kyjax_usage' );
 
 
 function kyjax_upgrade() {
@@ -606,6 +662,19 @@ function kyjax_upgrade() {
 		$ver = $_POST['ver'];
 
 		$kyreply = new KYGUpgrade();
+		
+		$valid = "";
+		if (strlen($product) > 50) $valid = "Product is too long";
+		if (strlen($ver) > 15) $valid = "Version is too long";
+		if (strlen($custom) > 60) $valid = "Custom is too long";
+
+		//Return validation failure reason
+		if ($valid != "") {
+			$kyreply->message = $valid;
+			$kyreply->valid = "FALSE";
+		  echo $kyreply->to_json();
+		  exit;
+		}
 
 		//Validate Supplied Data
 	  $uprow = KYGINTR_jal_productupdate( $product, $ver, $custom );
@@ -630,8 +699,8 @@ function kyjax_upgrade() {
 		exit;
 
 }
-add_action( 'wp_ajax_nopriv_upgrade', 'kyjax_upgrade' );
-add_action( 'wp_ajax_upgrade', 'kyjax_upgrade' );
+add_action( 'wp_ajax_nopriv_kyg_upgrade', 'kyjax_upgrade' );
+add_action( 'wp_ajax_kyg_upgrade', 'kyjax_upgrade' );
 
 function kyjax_upgrade_add() {
 
@@ -657,7 +726,7 @@ function kyjax_upgrade_add() {
 	echo $kyreply->to_json();
 	exit;
 }
-add_action( 'wp_ajax_upgrade_add', 'kyjax_upgrade_add' );
+add_action( 'wp_ajax_kyg_upgrade_add', 'kyjax_upgrade_add' );
 
 function kyjax_upgrade_edit() {
 
@@ -684,11 +753,12 @@ function kyjax_upgrade_edit() {
 	echo $kyreply->to_json();
 	exit;
 }
-add_action( 'wp_ajax_upgrade_edit', 'kyjax_upgrade_edit' );
+add_action( 'wp_ajax_kyg_upgrade_edit', 'kyjax_upgrade_edit' );
 
 
 function kyjax_reg_edit() {
-
+	header( "Content-Type: application/json" );
+	
 	$kyreply = new KYGResultObject();
 	$id = $_POST['id'];
 	$name = $_POST['name'];
@@ -703,6 +773,46 @@ function kyjax_reg_edit() {
 	$custom = $_POST['custom'];
 	$zipcode = $_POST['zipcode'];
 
+	$valid = "";
+	if (strlen($name) > 60) $valid = "Name is too long";
+	if (strlen($address) > 120) $valid = "Address is too long";
+	if (strlen($city) > 60) $valid = "City is too long";
+	if (strlen($state) > 50) $valid = "State is too long";
+	if (strlen($email) > 120) $valid = "Email is too long";
+	if (strlen($phone) > 30) $valid = "Phone is too long";
+	if (strlen($zipcode) > 15) $valid = "Postal|Zip is too long";
+
+	if (strlen($product) > 50) $valid = "Product is too long";
+	if (strlen($version) > 15) $valid = "Version is too long";
+	if (strlen($custom) > 60) $valid = "Custom is too long";
+
+	//Return validation failure reason
+	if ($valid != "") {
+		$kyreply->message = "Invalid Data - " . $valid;
+		$kyreply->valid = "FALSE";
+	  echo $kyreply->to_json();
+	  exit;
+	}
+	
+	$email = sanitize_email($email);
+	$name = sanitize_text_field($name);
+	$address = sanitize_text_field($address);
+	$state = sanitize_text_field($state);
+	$city = sanitize_text_field($city);
+	$phone = sanitize_text_field($phone);
+	$email = sanitize_text_field($email);
+	$contact = sanitize_text_field($contact);
+	$zipcode = sanitize_text_field($zipcode);
+	
+	$product = sanitize_text_field($product);
+	$version = sanitize_text_field($version);
+	$custom = sanitize_text_field($custom);
+
+	$name = stripslashes_deep($name);
+	$address = stripslashes_deep($address);
+	$contact = stripslashes_deep($contact);
+	$city = stripslashes_deep($city);
+
 
 	$updated = KYGINTR_jal_editRegistration( $id, $product, $version, $name, $address, $state, $city, $phone, $email, $contact, $custom, $zipcode );
 	if ($updated) {
@@ -713,10 +823,9 @@ function kyjax_reg_edit() {
 		$kyreply->valid = "FALSE";
 	}
 
-	header( "Content-Type: application/json" );
 	echo $kyreply->to_json();
 	exit;
 }
-add_action( 'wp_ajax_reg_edit', 'kyjax_reg_edit' );
+add_action( 'wp_ajax_kyg_reg_edit', 'kyjax_reg_edit' );
 
 //*************** END AJAX API Calls ***********************

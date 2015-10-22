@@ -62,7 +62,7 @@ namespace com.Kyght.InstallTracker
             //Error Handler not added here so caller can deal with the real errors.
 
             var response = HttpHelper.Post(URL, new NameValueCollection() {
-                { "action", "regupdate" },                
+                { "action", "kyg_regupdate" },                
                 { "sky", SecretKey },                
                 { "product", Product },
                 { "ver", Version },
@@ -95,7 +95,7 @@ namespace com.Kyght.InstallTracker
         public bool Usage(String key, OnTrackerComplete onComplete )
         {
             var pars = new NameValueCollection() {
-                { "action", "useapp" },                
+                { "action", "kyg_useapp" },                
                 { "sky", SecretKey },                
                 { "product", Product },
                 { "ver", Version },
@@ -132,6 +132,7 @@ namespace com.Kyght.InstallTracker
             KyghtWebClient kywc = sender as KyghtWebClient;
             if (kywc != null) webRequests.Remove(kywc);
 
+            if (e.Error != null) return; //There was a server error
             var str = System.Text.Encoding.Default.GetString(e.Result);
             if (str != null && str.Equals("0")) return; //Secret key might not match
             var outObject = JsonConvert.DeserializeObject<KyghtObject>(str);            
@@ -152,7 +153,7 @@ namespace com.Kyght.InstallTracker
         public bool UpgradeAvailable(out Upgrade details, OnUpgradeAvailable onUpgrade)
         {
             var pars = new NameValueCollection() {
-                { "action", "upgrade" },                
+                { "action", "kyg_upgrade" },                
                 { "sky", SecretKey },                
                 { "product", Product },
                 { "ver", Version },
