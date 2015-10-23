@@ -4,6 +4,7 @@ Tags: install, distribution, usage, track, upgrade
 Donate link: http://www.kyght.com/
 Requires at least: 4.3
 Tested up to: 4.3
+Stable tag: 1.7
 License: GPL v3
 License URI: www.kyght.com/gpl.txt
 
@@ -21,6 +22,7 @@ Plugin REST API
        useapp     - Updates product\version usage and registered client use
        upgrade    - Checks for a product upgrade with a higher version number
 
+    Note: Product and Registration records are automatically added\updated via inbound API calls. Only Upgrades are added via the Admin console.
 
     Example (.Net API call to register a client)
 
@@ -92,6 +94,12 @@ installTrack = new Tracker(\"http://www.yoursite.com/wp-admin/admin-ajax.php\", 
 == Installation ==
 1. Upload `kyght-installtrack` folder to the `/wp-content/plugins/` directory
 2. Activate the plugin through the \'Plugins\' menu in WordPress
+3. Open Admin console, click Settings | InstallTracker and enter a secret key.
+4. Start using the API as defined above
+      * Option 1 - Make HTTP post calls from the platform your using
+      * Option 2 - Download .Net Wrapper dll, import into your Visual Studio project and use it
+           * var installTrack = new Tracker(\"http://www.yoursite.com/wp-admin/admin-ajax.php\", \"YourProduct\", \"2.1.16.80\", \"666745\");
+ 
 
 == Frequently Asked Questions ==
 = How do I call the functions =
