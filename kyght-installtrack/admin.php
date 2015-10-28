@@ -33,7 +33,7 @@ global $wpdb;
 	$table_name = $wpdb->prefix . "kyght_companytry";
 	$comp_count = $wpdb->get_var( "SELECT count(*) FROM " . $table_name );
 	$comp_avguse = $wpdb->get_var( "SELECT avg(usecount) FROM " . $table_name );
-	$top10reg = $wpdb->get_results( "SELECT * FROM " . $table_name . " order by usecount" );
+	$top10reg = $wpdb->get_results( "SELECT * FROM " . $table_name . " order by usecount desc" );
 	
 	echo '<div class="wrap">';
 	?>
