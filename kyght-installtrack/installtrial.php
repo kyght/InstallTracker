@@ -14,7 +14,7 @@ Author URI: www.kyght.com
 
 global $wpdb;
 global $KYGINTR_jal_db_version;
-$KYGINTR_jal_db_version = '1.7';
+$KYGINTR_jal_db_version = '1.9';
 
 //*************** PLUGIN DEFINES ***********************
 
@@ -29,6 +29,9 @@ define('KYG_INSTK_PRODUCT_TABLE', $wpdb->prefix . "kyght_producttry");
 //   Custom fields can be used for clients that have a custom version
 define('KYG_INSTK_UPGRADE_TABLE', $wpdb->prefix . "kyght_upgrade");
 
+//Records activated licenses from a client
+//   Custom fields can be used for clients that have a custom version
+define('KYG_INSTK_LICENSE_TABLE', $wpdb->prefix . "kyght_license");
 
 //***** Plugin Files *******
 include( plugin_dir_path( __FILE__ ) . 'options.php');
@@ -100,6 +103,33 @@ class KYGUpgrade extends KYGResultObject {
 				);
 	}
 }
+
+//Upgrade class returned when an upgrade is available
+class KYGLicense extends KYGResultObject {
+	public $id = 0;
+	public $product = "";
+	public $version = "";
+	public $custom = "";
+	public $lickey = "";
+	public $module = "";
+	public $count = "";
+	public $detail = "";
+	//We are going to approve by default, we are assuming they were giving a license key to use
+	public $approved = "TRUE"; 
+	protected function getArray() {
+	  return array(
+				'id' => $this->id,
+				'product' => $this->product,
+				'version' => $this->version,
+				'custom' => $this->custom,
+				'lickey' => $this->lickey,
+				'module' => $this->module,
+				'count' => $this->count,
+				'detail' => $this->detail,
+				'approved' => $this->approved
+				);
+	}
+}
 //************** END CLASSES *********************
 
 
@@ -158,7 +188,34 @@ function KYGINTR_createtables() {
 		url varchar(255) NOT NULL,
 		notesurl varchar(255) NULL,
 		UNIQUE KEY id (id),
-		INDEX upidx (product, custom)
+		INDEX upidx (product,custom)
+	) $charset_collate;";
+
+	require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+	dbDelta( $sql );
+	
+	//CREATE LICENSE TABLE
+	$sql = "CREATE TABLE " . KYG_INSTK_LICENSE_TABLE . " (
+		id int(10) NOT NULL AUTO_INCREMENT,
+		product varchar(50) NOT NULL,
+		version varchar(15) NOT NULL,
+		vernum int(10) NOT NULL,
+		custom varchar(60) NULL,
+		keyguid varchar(100) NOT NULL,
+		regid int(10) NULL,
+		lickey varchar(255) NOT NULL,
+		module varchar(60) NULL,
+		count int(10) NULL,
+		details varchar(255) NULL,
+		activations int(10) NULL,
+		approved boolean NOT NULL DEFAULT 1,
+		lastupdate datetime DEFAULT '0000-00-00 00:00:00' NULL,
+		name varchar(120) NULL,
+		UNIQUE KEY id (id),
+		INDEX (keyguid),
+		INDEX (regid),
+		INDEX (lickey),
+		INDEX licidx (product,module,regid)
 	) $charset_collate;";
 
 	require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
@@ -191,7 +248,7 @@ function KYGINTR_jal_upgrade() {
 	$installed_ver = get_option( "jal_db_version" );
 
 	if ( $installed_ver != $KYGINTR_jal_db_version ) {
-		createtables();
+		KYGINTR_createtables();
 		update_option( 'jal_db_version', $KYGINTR_jal_db_version );
 	}
 }
@@ -353,6 +410,59 @@ function KYGINTR_jal_usage( $keyguid, $product, $version, $custom ) {
 					  'product' => $product,
 						)
 		);
+		return true;
+	}
+	return false;
+}
+
+function KYGINTR_jal_licenseupdate( $product, $ver, $custom, $key, $trackid, $lickey, $module, $count, $detail, $name ) {
+	global $wpdb;
+	//We are going to license products modules and not product versions
+	$procnt = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM " . KYG_INSTK_LICENSE_TABLE . " WHERE product = %s and module = %s and regid = %d", $product, $module, $trackid) );
+	if ($procnt <= 0) {
+	  //INSERT License
+		$wpdb->insert(
+			KYG_INSTK_LICENSE_TABLE,
+			array(
+				'activations' => 1,	// Integer
+				'product' => $product,
+				'version' => $version,
+				'custom' => $custom,
+				'keyguid' => $key,
+				'regid' => $trackid,
+				'name' => $name,
+				'lickey' => $lickey,
+				'module' => $module,
+				'count' => $count,
+				'details' => $detail,
+				'lastupdate' => current_time('mysql', 1),
+			)
+		);
+		
+		$lastid = $wpdb->insert_id;
+		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . KYG_INSTK_LICENSE_TABLE . " WHERE id = %d ", $lastid) );
+	} else {
+	  //UPDATE License activations
+		$usage = $wpdb->get_var( $wpdb->prepare( "SELECT activations FROM " . KYG_INSTK_LICENSE_TABLE . " WHERE product = %s and module = %s and regid = %d", $product, $module, $trackid) );
+		if ($usage == NULL) $usage = 0;
+		$usage = $usage + 1;
+
+		$wpdb->update(
+			KYG_INSTK_LICENSE_TABLE,
+			array(
+        'name' => $name,
+			  'lickey' => $lickey, //They might have been give a new license ID
+				'activations' => $usage,	// Integer
+				'lastupdate' => current_time('mysql', 1),
+			),
+			array(
+					  'product' => $product,
+					  'module' => $module,
+						'regid' => $trackid,
+						)
+		);
+
+		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . KYG_INSTK_LICENSE_TABLE . " WHERE product = %s and module = %s and regid = %d", $product, $module, $trackid) );
 	}
 }
 
@@ -624,10 +734,13 @@ function kyjax_usage() {
 		  exit;
 		}
 		
-	  KYGINTR_jal_usage( $key, $product, $ver, $custom );
+	  $isreg = KYGINTR_jal_usage( $key, $product, $ver, $custom );
 	  
 		$kyreply->message = "Usage Updated";
-		$kyreply->valid = "TRUE";
+		if ($isreg)
+			$kyreply->valid = "TRUE";
+		else
+		  $kyreply->valid = "FALSE";
 		
 		echo $kyreply->to_json();
 		exit;
@@ -701,6 +814,105 @@ function kyjax_upgrade() {
 }
 add_action( 'wp_ajax_nopriv_kyg_upgrade', 'kyjax_upgrade' );
 add_action( 'wp_ajax_kyg_upgrade', 'kyjax_upgrade' );
+
+
+function kyjax_license() {
+		$kyoptions = get_option( 'kytracker_option_name' );
+		$secret_key = 0;
+		if ($kyoptions != NULL) {
+			$secret_key = $kyoptions['secret_key'];
+		}
+
+		$sKey = $_POST['sky'];
+		//We need to guard all API calls with a key. We will read our key from Admin config later
+		if ($sKey != $secret_key) {
+		 		echo 0; //WP missing AJax Action Found
+		 		exit;
+		 }
+
+
+		//We will process this request
+		header( "Content-Type: application/json" );
+
+		//Read all Post variables
+    $product = $_POST['product'];
+		$custom = $_POST['custom'];
+		$ver = $_POST['ver'];
+
+		$name = $_POST['name'];
+		$lickey = $_POST['lickey'];
+		$module = $_POST['module'];
+		$count = $_POST['count'];
+		$detail = $_POST['detail'];
+		
+		$key = $_POST['key'];
+		$trackid = $_POST['trackid'];
+
+		$kyreply = new KYGLicense();
+
+		$valid = "";
+		
+		if ($key == null) $valid = "Key not supplied";
+		if (strlen($key) < 32) $valid = "Key too short";
+		if (strlen($key) > 38) $valid = "Key too long";
+		if ($key == "00000000-0000-0000-0000-000000000000") $valid = "Key not initialized";
+
+		if (strlen($product) > 50) $valid = "Product is too long";
+		if (strlen($ver) > 15) $valid = "Version is too long";
+		if (strlen($custom) > 60) $valid = "Custom is too long";
+		if (strlen($module) > 60) $valid = "Module is too long";
+		if ($lickey == null) $valid = "License Key not supplied";
+		if (strlen($lickey) > 255) $valid = "License Key is too long";
+		if (strlen($detail) > 255) $valid = "Detail is too long";
+		if (strlen($name) > 120) $valid = "Name is too long";
+
+		//Return validation failure reason
+		if ($valid != "") {
+			$kyreply->message = $valid;
+			$kyreply->valid = "FALSE";
+		  echo $kyreply->to_json();
+		  exit;
+		}
+
+		//Validate Supplied Data
+	  $licrow = KYGINTR_jal_licenseupdate( $product, $ver, $custom, $key, $trackid, $lickey, $module, $count, $detail, $name );
+
+		//By Default we always want to approve
+		$kyreply->product = $product;
+		$kyreply->version = $ver;
+		$kyreply->module = $module;
+		$kyreply->lickey = $lickey;
+		$kyreply->detail = $detail;
+		$kyreply->approved = "TRUE";
+		$kyreply->message = "Licensed";
+		$kyreply->valid = "TRUE";
+		
+		if ($licupdate!=null) {
+		  //Lets fill data with information from the database that we may have changed
+		  $kyreply->id = $licrow->id;
+			$kyreply->product = $licrow->product;
+			$kyreply->version = $licrow->version;
+			$kyreply->custom = $licrow->custom;
+			$kyreply->module = $licrow->module;
+			$kyreply->lickey = $licrow->lickey;
+			$kyreply->detail = $licrow->detail;
+			$kyreply->count = $licrow->count;
+			if (!$licrow->approved) {
+				$kyreply->approved = "FALSE";
+				$kyreply->message = "Invalid Licensed";
+			} else {
+				$kyreply->approved = "TRUE";
+				$kyreply->message = "Licensed";
+			}
+		}
+
+		echo $kyreply->to_json();
+		exit;
+
+}
+add_action( 'wp_ajax_nopriv_kyg_license', 'kyjax_license' );
+add_action( 'wp_ajax_kyg_license', 'kyjax_license' );
+
 
 function kyjax_upgrade_add() {
 

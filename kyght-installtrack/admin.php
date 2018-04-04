@@ -18,6 +18,9 @@ function kytracker_admin_menu() {
 	add_submenu_page( 'kytracker_admin_upg', 'Add', 'Add', 'administrator', 'kytracker_admin_upg_add', 'kytracker_admin_upg_add' );
 	add_submenu_page( 'kytracker_admin_upg', 'Edit', 'Edit', 'administrator', 'kytracker_admin_upg_edit', 'kytracker_admin_upg_edit' );
 	add_submenu_page( 'kytracker_admin_upg', 'Delete', 'Delete', 'administrator', 'kytracker_admin_upg_del', 'kytracker_admin_upg_del' );
+	//Licenses
+	add_submenu_page( 'kytracker_admin_page', 'Licenses', 'Licenses', 'administrator', 'kytracker_admin_license', 'kytracker_admin_license' );
+	add_submenu_page( 'kytracker_admin_license', 'Edit', 'Edit', 'administrator', 'kytracker_admin_lic_edit', 'kytracker_admin_lic_edit' );
 }
 
 function kytracker_admin_page() {
@@ -34,6 +37,10 @@ global $wpdb;
 	$comp_count = $wpdb->get_var( "SELECT count(*) FROM " . $table_name );
 	$comp_avguse = $wpdb->get_var( "SELECT avg(usecount) FROM " . $table_name );
 	$top10reg = $wpdb->get_results( "SELECT * FROM " . $table_name . " order by usecount desc" );
+
+	$license_table = $wpdb->prefix . "kyght_license";
+	$lic_count = $wpdb->get_var( "SELECT count(*) FROM " . $license_table );
+	$act_usage = $wpdb->get_var( "SELECT sum(activations) FROM " . $license_table );
 	
 	echo '<div class="wrap">';
 	?>
@@ -67,9 +74,31 @@ global $wpdb;
 				<tr>
 					<td>Average Usage</td><td><?php echo $comp_avguse ?></td>
 		    </tr>
-				<tr>
-					<td colspan="2"><strong>Top 10 by Usage</strong></td>
-		    </tr>
+	    </tbody>
+		</table>
+
+		<br/>
+		<h3>Top 10 Registrations</h3>
+		<table class="widefat">
+	    <thead>
+	        <tr>
+	            <th scope="col" class="manage-column column-name" style="">Name</th>
+	            <th scope="col" class="manage-column column-name" style="">Email</th>
+	            <th scope="col" class="manage-column column-name" style="">Usage</th>
+	            <th scope="col" class="manage-column column-name" style="">Licenses</th>
+	            <th scope="col" class="manage-column column-name" style="">Last Used</th>
+					</tr>
+	    </thead>
+	    <tfoot>
+	        <tr>
+	            <th scope="col" class="manage-column column-name" style="">Name</th>
+	            <th scope="col" class="manage-column column-name" style="">Email</th>
+	            <th scope="col" class="manage-column column-name" style="">Usage</th>
+	            <th scope="col" class="manage-column column-name" style="">Licenses</th>
+	            <th scope="col" class="manage-column column-name" style="">Last Used</th>
+					</tr>
+	    </tfoot>
+	    <tbody>
 	        <?php if( $top10reg ) { ?>
 
 	            <?php
@@ -86,9 +115,15 @@ global $wpdb;
 												$url = admin_url($path);
 												$link = "<a href='{$url}'>{$entry->name}</a>";
 												echo $link;
+												
+												//Check for Liceses
+												$liccnt = $wpdb->get_var( $wpdb->prepare( "SELECT count(*) FROM " . $license_table . " WHERE regid = %d ", $entry->id) );
 												?>
 									</td>
 	                <td><?php echo $entry->email; ?></td>
+	                <td><?php echo $entry->usecount; ?></td>
+	                <td><?php echo $liccnt ?></td>
+	                <td><?php echo $entry->lastused; ?></td>
 	            </tr>
 
 	            <?php
@@ -105,7 +140,25 @@ global $wpdb;
 	    </tbody>
 		</table>
 
-	
+
+		<br/>
+		<table class="widefat">
+	    <thead>
+	        <tr>
+	            <th colspan="2" scope="col" class="manage-column column-name" style=""><h3>License Summary</h3></th>
+					</tr>
+	    </thead>
+	    <tbody>
+	      <tr>
+					<td width="50%">Number of Licenses</td><td><?php echo $lic_count ?></td>
+				</tr>
+				<tr>
+					<td>Total number of activations</td><td><?php echo $act_usage ?></td>
+		    </tr>
+	    </tbody>
+		</table>
+
+
 		<?php
 		
 	echo '</div>';
@@ -514,6 +567,171 @@ wp_localize_script( 'kytracker', 'KyITrack', array( 'ajaxurl' => admin_url( 'adm
    </div>
 <?php
 }
+
+
+function kytracker_admin_license() {
+global $wpdb;
+
+	echo '<div class="wrap">';
+	echo '<h2>License</h2>';
+
+$table_name = $wpdb->prefix . "kyght_license";
+$pagenum = isset( $_GET['pagenum'] ) ? absint( $_GET['pagenum'] ) : 1;
+$limit = 5;
+$offset = ( $pagenum - 1 ) * $limit;
+$entries = $wpdb->get_results( "SELECT * FROM " . $table_name . " LIMIT $offset, $limit" );
+
+echo '<div class="wrap">';
+
+?>
+<table class="widefat">
+    <thead>
+        <tr>
+            <th scope="col" class="manage-column column-name" style="">Name</th>
+            <th scope="col" class="manage-column column-name" style="">Product</th>
+            <th scope="col" class="manage-column column-name" style="">Module</th>
+            <th scope="col" class="manage-column column-name" style="">License</th>
+            <th scope="col" class="manage-column column-name" style="">Count</th>
+            <th scope="col" class="manage-column column-name" style="">Activations</th>
+            <th scope="col" class="manage-column column-name" style="">Last Updated</th>
+        </tr>
+    </thead>
+
+    <tfoot>
+        <tr>
+            <th scope="col" class="manage-column column-name" style="">Name</th>
+            <th scope="col" class="manage-column column-name" style="">Product</th>
+            <th scope="col" class="manage-column column-name" style="">Module</th>
+            <th scope="col" class="manage-column column-name" style="">License</th>
+            <th scope="col" class="manage-column column-name" style="">Count</th>
+            <th scope="col" class="manage-column column-name" style="">Activations</th>
+            <th scope="col" class="manage-column column-name" style="">Last Updated</th>
+        </tr>
+    </tfoot>
+
+    <tbody>
+        <?php if( $entries ) { ?>
+
+            <?php
+            $count = 1;
+            $class = '';
+            foreach( $entries as $entry ) {
+                $class = ( $count % 2 == 0 ) ? ' class="alternate"' : '';
+            ?>
+
+            <tr<?php echo $class; ?>>
+                <td>
+										<?php
+										  if ($entry->regid != null) {
+												$path = 'admin.php?page=kytracker_admin_reg_view&id='.$entry->regid;
+												$url = admin_url($path);
+												$link = "<a href='{$url}'>{$entry->name}</a>";
+												echo $link;
+											} else {
+												echo $entry->name;
+											}
+											?>
+								</td>
+                <td><?php echo $entry->product; ?></td>
+                <td><?php echo $entry->module; ?></td>
+                <td>
+										<?php
+											$path = 'admin.php?page=kytracker_admin_lic_edit&id='.$entry->id;
+											$url = admin_url($path);
+											$link = "<a href='{$url}'>{$entry->lickey}</a>";
+											echo $link;
+										?>
+								</td>
+                <td><?php echo $entry->count; ?></td>
+                <td><?php echo $entry->activations; ?></td>
+                <td><?php echo $entry->lastupdate; ?></td>
+            </tr>
+
+            <?php
+                $count++;
+            }
+            ?>
+
+        <?php } else { ?>
+        <tr>
+            <td colspan="2">No Licenses received yet</td>
+        </tr>
+        <?php } ?>
+    </tbody>
+</table>
+
+<?php
+
+$total = $wpdb->get_var( "SELECT COUNT(`id`) FROM " . $table_name );
+$num_of_pages = ceil( $total / $limit );
+$page_links = paginate_links( array(
+    'base' => add_query_arg( 'pagenum', '%#%' ),
+    'format' => '',
+    'prev_text' => __( '&laquo;', 'aag' ),
+    'next_text' => __( '&raquo;', 'aag' ),
+    'total' => $num_of_pages,
+    'current' => $pagenum,
+) );
+
+if ( $page_links ) {
+    echo '<div class="tablenav"><div class="tablenav-pages" style="margin: 1em 0">' . $page_links . '</div></div>';
+}
+
+echo '</div>';
+echo '</div>';
+}
+
+function kytracker_admin_lic_edit()
+{
+	global $wpdb;
+
+	$id = $_GET['id'];
+
+	if ($id == null) {
+		echo "<h2>Unable to locate that license record</h2>";
+		exit;
+	}
+
+	$table_name = $wpdb->prefix . "kyght_license";
+	$uprow = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . $table_name . " WHERE id = %d", $id) );
+
+wp_enqueue_script('kytracker', plugins_url( '/js/trackerlic.js' , __FILE__ ) , array( 'jquery' ));
+// including ajax script in the plugin Myajax.ajaxurl
+wp_localize_script( 'kytracker', 'KyITrack', array( 'ajaxurl' => admin_url( 'admin-ajax.php') ) );
+?>
+   <div class="wrap">
+      <h2>Edit License</h2>
+      <form>
+				<table class="widefat">
+			    <tbody>
+			      <tr><td>Product</td><td><input type="text" size="40" id="product" name="product" value="<?php echo $uprow->product ?>"/></td></tr>
+			      <tr><td>Version</td><td><input type="text" size="15" id="version" name="version" value="<?php echo $uprow->version ?>"/></td></tr>
+			      <tr><td>Custom</td><td><input type="text" id="custom" size="50" name="custom" value="<?php echo $uprow->custom ?>"/></td></tr>
+			      <tr><td>Module</td><td><input type="text" size="80" id="module" name="module" value="<?php echo $uprow->module ?>"/></td></tr>
+			      <tr><td>License Key</td><td><input type="text" size="80" id="lickey" name="lickey" value="<?php echo $uprow->lickey ?>"/></td></tr>
+			      <tr><td>Records</td><td><input type="text" size="80" id="records" name="records" value="<?php echo $uprow->count ?>"/></td></tr>
+			      <tr><td>Activations</td><td><input type="text" size="80" id="activations" name="activations" value="<?php echo $uprow->activations ?>"/></td></tr>
+			      <tr><td>Approved</td><td><input type="checkbox" size="80" id="approved" name="approved"
+								<?php
+								  if ($uprow->approved) echo "checked";
+								?>/>
+						</td></tr>
+			      <tr><td>Details</td><td><input type="text" size="80" id="details" name="details" value="<?php echo $uprow->details ?>"/></td></tr>
+			      <tr><td>KeyGuid</td><td><?php echo $uprow->keyguid ?></td></tr>
+			      <tr><td>Last Updated</td><td><?php echo $uprow->lastupdate ?></td></tr>
+			      <tr>
+						   <td><input type="button" id="submit" name="submit" value="Submit" class="button-primary"/></td>
+						   <td></td>
+						</tr>
+	    		<tbody>
+         </table>
+          <input type="hidden" id="id" name="id" value="<?php echo $id ?>"/>
+          <input type="hidden" id="action" name="action" value="kyg_license_edit"/>
+      </form>
+   </div>
+<?php
+}
+
 
 function kytracker_admin_upg_del()
 {
